@@ -35,6 +35,7 @@ import org.nsh07.simplygraph.ui.theme.SimplyGraphTheme
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun AppScreen(modifier: Modifier = Modifier) {
+    val xWidth = 10 // Number of integral x-coordinates visible on screen
     val colorScheme = colorScheme
     var function by remember { mutableStateOf("x") }
     var canvasSize by remember { mutableStateOf(Size(0f, 0f)) }
@@ -50,19 +51,25 @@ fun AppScreen(modifier: Modifier = Modifier) {
                     .variable("x")
                     .build()
 
-                val xWidth = 10
-
                 val newPoints = mutableListOf<Offset>()
                 val widthInt = canvasSize.width.toInt()
 
                 for (i in 0..widthInt) {
+                    // Calculate the value of x and y for the given i-pixel-offset
+                    // x can be simply calculated by subtracting half of canvas width (to shift origin to half of the screen) and then scaling according to xWidth
                     val x = ((i.toDouble() - canvasSize.width / 2) / canvasSize.width) * xWidth
-                    val y = (-exp.setVariable("x", x).evaluate() * (canvasSize.height / (xWidth * (canvasSize.height / canvasSize.width)))) + canvasSize.height / 2
+
+                    // Calculating y is a bit more complex, we find the value of f(x) for x as calculated above,
+                    // then multiply it by the below factor to scale it to keep the x and y-axis scale uniform in the graph
+                    // We then subtract this value from half of the canvas width (to shift origin to half the screen)
+                    // And voila, we get a graph with the origin at the center of the screen.
+                    val y =
+                        (-exp.setVariable("x", x).evaluate() * (canvasSize.height / (xWidth * (canvasSize.height / canvasSize.width)))) + canvasSize.height / 2
                     newPoints.add(Offset(i.toFloat(), y.toFloat()))
                 }
 
                 points = newPoints.toList()
-                invalidations++
+                invalidations++ // Forces a redraw (recomposition) of the canvas
             } catch (_: Exception) {
                 points = emptyList()
                 invalidations++
@@ -95,6 +102,25 @@ fun AppScreen(modifier: Modifier = Modifier) {
                     end = Offset(size.width / 2, size.height),
                     strokeWidth = 2.dp.toPx()
                 )
+
+                // Draw gridlines
+                for (i in 0..xWidth) {
+                    val x = (i.toDouble() - xWidth / 2) * (size.width / xWidth) + size.width / 2
+                    drawLine(
+                        color = colorScheme.surfaceDim,
+                        start = Offset(x.toFloat(), 0f),
+                        end = Offset(x.toFloat(), size.height)
+                    )
+                }
+
+                for (i in 0..(xWidth * (canvasSize.height / canvasSize.width)).toInt()) {
+                    val y = (i.toDouble() - xWidth * (canvasSize.height / canvasSize.width) / 2) * (size.height / (xWidth * (canvasSize.height / canvasSize.width))) + size.height / 2
+                    drawLine(
+                        color = colorScheme.surfaceDim,
+                        start = Offset(0f, y.toFloat()),
+                        end = Offset(size.width, y.toFloat())
+                    )
+                }
 
                 // Draw the graph
 
