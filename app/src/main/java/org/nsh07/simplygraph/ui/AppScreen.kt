@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,23 +32,26 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import net.objecthunter.exp4j.ExpressionBuilder
 import org.nsh07.simplygraph.ui.theme.SimplyGraphTheme
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun AppScreen(modifier: Modifier = Modifier) {
-    val xWidth = 10 // Number of integral x-coordinates visible on screen
     val colorScheme = colorScheme
-    var function by remember { mutableStateOf("") }
+    var function by rememberSaveable { mutableStateOf("") }
     var canvasSize by remember { mutableStateOf(Size(0f, 0f)) }
     var points = emptyList<Offset>()
     var invalidations by remember { mutableIntStateOf(0) }
+
+    val xWidth = 10 // Number of integral x-coordinates visible on screen
+    val yWidth = xWidth * (canvasSize.height / canvasSize.width)
 
     LaunchedEffect(function) {
         // Evaluate expression at various points along the x-axis and find y-values accordingly
         if (function.isNotEmpty()) {
             try {
-                points = calculateGraphPoints(function, canvasSize, xWidth)
+                points = calculateGraphPoints(function, canvasSize, xWidth, yWidth)
                 invalidations++ // Forces a redraw (recomposition) of the canvas
             } catch (_: Exception) {
                 points = emptyList()
@@ -86,7 +90,10 @@ fun AppScreen(modifier: Modifier = Modifier) {
                 // Draw the graph
                 drawPoints(
                     points,
-                    pointMode = PointMode.Polygon,
+                    pointMode =
+                        if (function.contains('y'))
+                            PointMode.Points
+                        else PointMode.Polygon,
                     color = colorScheme.primary,
                     strokeWidth = 3.dp.toPx()
                 )
@@ -99,7 +106,8 @@ fun AppScreen(modifier: Modifier = Modifier) {
             ) {
                 OutlinedTextField(
                     value = function,
-                    onValueChange = { function = it }
+                    onValueChange = { function = it },
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
 //                Button(onClick = { redrawCount++ }, shapes = ButtonDefaults.shapes()) {
@@ -113,43 +121,105 @@ fun AppScreen(modifier: Modifier = Modifier) {
 fun calculateGraphPoints(
     function: String,
     canvasSize: Size,
-    xWidth: Int
+    xWidth: Int,
+    yWidth: Float
 ): List<Offset> {
-    val exp = ExpressionBuilder(function)
-        .variable("x")
-        .build()
+    val hasY = function.contains('y')
 
-    val res = exp.validate(false)
+    val exp =
+        if (!hasY) {
+            ExpressionBuilder(function)
+                .variable("x")
+                .build()
+        } else null
 
-    if (!res.isValid) {
-        Log.e("Graph", "Invalid function: $function")
-        throw IllegalArgumentException()
+    val expRhs =
+        if (hasY) {
+            // If the function also contains y, we need to split the RHS and LHS and evaluate them separately
+            // This contains the RHS
+            val rhs = function.substringAfter('=')
+            ExpressionBuilder(rhs)
+                .variable("x")
+                .variable("y")
+                .build()
+        } else null
+
+    val expLhs = if (hasY) {
+        // LHS
+        val lhs = function.substringBefore('=', "y")
+        ExpressionBuilder(lhs)
+            .variable("x")
+            .variable("y")
+            .build()
+    } else null
+
+    val res = exp?.validate(false)
+    val resRhs = expRhs?.validate(false)
+    val resLhs = expLhs?.validate(false)
+
+    if (!hasY) {
+        if (res?.isValid != true) {
+            Log.e("Graph", "Invalid function: $function")
+            throw IllegalArgumentException()
+        }
+    } else {
+        if (resRhs?.isValid != true || resLhs?.isValid != true || !function.contains('x')) {
+            Log.e("Graph", "Invalid function: $function\n${resRhs?.errors}")
+            throw IllegalArgumentException()
+        }
     }
 
     val newPoints = mutableListOf<Offset>()
     val widthInt = canvasSize.width.toInt()
+    val heightInt = canvasSize.height.toInt()
     val yScaleFactor =
-        (canvasSize.height / (xWidth * (canvasSize.height / canvasSize.width)))
+        (canvasSize.height / (yWidth))
 
-    for (i in 0..widthInt) {
-        try {
-            // Calculate the value of x and y for the given i-pixel-offset
-            // x can be simply calculated by subtracting half of canvas width (to shift origin to half of the screen) and then scaling according to xWidth
-            val x = ((i.toDouble() - canvasSize.width / 2) / canvasSize.width) * xWidth
+    if (!hasY) {
+        for (i in 0..widthInt) {
+            try {
+                // Calculate the value of x and y for the given i-pixel-offset
+                // x can be simply calculated by subtracting half of canvas width (to shift origin to half of the screen) and then scaling according to xWidth
+                val x = ((i.toDouble() - canvasSize.width / 2) / canvasSize.width) * xWidth
 
-            // Calculating y is a bit more complex, we find the value of f(x) for x as calculated above,
-            // then multiply it by the below factor to scale it to keep the x and y-axis scale uniform in the graph
-            // We then subtract this value from half of the canvas width (to shift origin to half the screen)
-            // And voila, we get a graph with the origin at the center of the screen.
-            val y = (-exp.setVariable("x", x).evaluate() * yScaleFactor) +
-                    canvasSize.height / 2
-            newPoints.add(Offset(i.toFloat(), y.toFloat()))
-        } catch (_: Exception) {
-            Log.e("Graph", "Cannot evaluate point:\nx = $x\nfunction = $function")
+                // Calculating y is a bit more complex, we find the value of f(x) for x as calculated above,
+                // then multiply it by the below factor to scale it to keep the x and y-axis scale uniform in the graph
+                // We then subtract this value from half of the canvas width (to shift origin to half the screen)
+                // And voila, we get a graph with the origin at the center of the screen.
+                val y = (-exp!!.setVariable("x", x).evaluate() * yScaleFactor) +
+                        canvasSize.height / 2
+                newPoints.add(Offset(i.toFloat(), y.toFloat()))
+            } catch (_: Exception) {
+                Log.e("Graph", "Cannot evaluate point:\nx = $x\nfunction = $function")
+            }
+        }
+    } else {
+        for (i in 0..widthInt) {
+            for (j in 0..heightInt) {
+                try {
+                    val x = ((i.toDouble() - canvasSize.width / 2) / canvasSize.width) * xWidth
+                    val y = (-(j.toDouble() - canvasSize.height / 2) / canvasSize.height) * yWidth
+                    val varMap = mapOf("x" to x, "y" to y)
+
+                    val rhs = expRhs!!.setVariables(varMap).evaluate()
+                    val lhs = expLhs!!.setVariables(varMap).evaluate()
+
+                    if (approxEqual(lhs, rhs, 0.01)) {
+                        newPoints.add(Offset(i.toFloat(), j.toFloat()))
+                    }
+                } catch (_: Exception) {
+                    Log.e("Graph", "Cannot evaluate point:\nfunction = $function")
+                }
+            }
         }
     }
 
     return newPoints.toList()
+}
+
+fun approxEqual(a: Double, b: Double, eps: Double): Boolean {
+    return if (a != 0.0) abs((a - b) / a) < eps
+    else false
 }
 
 @Preview
