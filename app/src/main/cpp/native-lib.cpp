@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "exprtk/include/exprtk.hpp"
+#include "exprtk.hpp"
 #include "funcs.h"
 
 typedef exprtk::symbol_table<double> symbol_table;
