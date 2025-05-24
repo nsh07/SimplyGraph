@@ -6,8 +6,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -113,6 +115,7 @@ class UiViewModel : ViewModel() {
 
                     if (!hasY) {
                         for (i in 0..widthInt) {
+                            ensureActive()
                             try {
                                 // Calculate the value of x and y for the given i-pixel-offset
                                 // x can be simply calculated by subtracting half of canvas width (to shift origin to half of the screen) and then scaling according to xWidth
@@ -138,6 +141,7 @@ class UiViewModel : ViewModel() {
                         // at each pixel
                         for (i in 0..widthInt) {
                             for (j in 0..heightInt) {
+                                ensureActive()
                                 try {
                                     val x =
                                         ((i.toDouble() - canvasSize.width / 2) / canvasSize.width) * xWidth
@@ -168,8 +172,9 @@ class UiViewModel : ViewModel() {
                             points = newPoints.toList()
                         )
                     }
-                } catch (_: Exception) {
-                    _graphState.update { currentState ->
+                } catch (e: Exception) {
+                    if (e !is CancellationException)
+                        _graphState.update { currentState ->
                         currentState.copy(
                             invalidations = currentState.invalidations + 1,
                             points = emptyList()
