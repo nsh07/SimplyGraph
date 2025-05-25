@@ -40,7 +40,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
     bool hasY = functionStr.find('y') != std::string::npos;
 
     std::string preEqual = functionStr.substr(0, equalsIndex - 1);
-    bool isPolar = (equalsIndex != std::string::npos) && (trim(preEqual) == "r");
+    bool isPolar = !(hasX || hasY) && (equalsIndex != std::string::npos) && (trim(preEqual) == "r");
 
     if (isPolar) {
         /*
@@ -68,7 +68,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
                 points.push_back(float(r * cos(theta) * xScaleFactor + canvasWidth / 2));
                 points.push_back(float(-r * sin(theta) * yScaleFactor + canvasHeight / 2));
             }
-            theta += 0.1;
+            theta += 0.01; // Increment by roughly 0.5 degrees
         }
     } else if (!hasY) {
         // Explicit function of x (in the form f(x))
