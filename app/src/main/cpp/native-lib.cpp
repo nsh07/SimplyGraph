@@ -22,6 +22,8 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         jobject,
         jint xWidth,
         jdouble yWidth,
+        jdouble xOffset,
+        jdouble yOffset,
         jdouble canvasWidth,
         jdouble canvasHeight,
         jstring function
@@ -65,8 +67,8 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         while (theta < 12 * M_PI) {
             r = expression.value();
             if (!std::isnan(r)) {
-                points.push_back(float(r * cos(theta) * xScaleFactor + canvasWidth / 2));
-                points.push_back(float(-r * sin(theta) * yScaleFactor + canvasHeight / 2));
+                points.push_back(float(r * cos(theta) * xScaleFactor + canvasWidth / 2) + xOffset);
+                points.push_back(float(-r * sin(theta) * yScaleFactor + canvasHeight / 2) + yOffset);
             }
             theta += 0.01; // Increment by roughly 0.5 degrees
         }
@@ -84,7 +86,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         parser parser;
         parser.compile(functionStr, expression);
 
-        for (int i = 0; i <= canvasWidth; i++) {
+        for (int i = -xOffset; i <= canvasWidth - xOffset; i++) {
             try {
                 // Calculate the value of x and y for the given i-pixel-offset
                 // x can be simply calculated by subtracting half of canvas width (to shift origin to half of the screen) and then scaling according to xWidth
@@ -97,8 +99,8 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
                 double y = (-expression.value() * yScaleFactor) + canvasHeight / 2;
 
                 if (!std::isnan(y)) {
-                    points.push_back(float(i));
-                    points.push_back(float(y));
+                    points.push_back(float(i) + xOffset);
+                    points.push_back(float(y) + yOffset);
                 }
             } catch (...) {
                 continue;
@@ -135,8 +137,8 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
 
         // Iterate over every pixel on the canvas and evaluate LHS and RHS at each pixel
         // If they are equal, add the pixel to the list of points
-        for (int i = 0; i <= canvasWidth; i++) {
-            for (int j = 0; j <= canvasHeight; j++) {
+        for (int i = -xOffset; i <= canvasWidth - xOffset; i++) {
+            for (int j = -yOffset; j <= canvasHeight - yOffset; j++) {
                 try {
                     x = ((i - canvasWidth / 2) / canvasWidth) * xWidth;
                     y = (-(j - canvasHeight / 2) / canvasHeight) * yWidth;
@@ -146,8 +148,8 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
 
                     if (approxEqual(lhsVal, rhsVal, 0.01) && !std::isnan(lhsVal) &&
                         !std::isnan(rhsVal)) {
-                        points.push_back(float(i));
-                        points.push_back(float(j));
+                        points.push_back(float(i) + xOffset);
+                        points.push_back(float(j) + yOffset);
                     }
                 } catch (...) {
                     continue;

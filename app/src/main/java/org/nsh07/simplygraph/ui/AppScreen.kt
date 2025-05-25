@@ -2,6 +2,8 @@ package org.nsh07.simplygraph.ui
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,11 +38,15 @@ fun AppScreen(modifier: Modifier = Modifier) {
     val functionsState by viewModel.functionsState.collectAsState()
 
     val colorScheme = colorScheme
+    val transformableState = rememberTransformableState { _, offsetChange, _ ->
+        viewModel.updateOffset(offsetChange)
+    }
 
     Scaffold(modifier = modifier) { insets ->
         Column {
             Canvas(
                 Modifier
+                    .transformable(transformableState)
                     .clipToBounds()
                     .weight(1f)
                     .fillMaxWidth()
@@ -50,16 +56,16 @@ fun AppScreen(modifier: Modifier = Modifier) {
                 // Draw the x-axis
                 drawLine(
                     color = colorScheme.onSurface,
-                    start = Offset(0f, size.height / 2),
-                    end = Offset(size.width, size.height / 2),
+                    start = Offset(0f, size.height / 2 + graphState.yOffset),
+                    end = Offset(size.width, size.height / 2 + graphState.yOffset),
                     strokeWidth = 2.dp.toPx()
                 )
 
                 // Draw the y-axis
                 drawLine(
                     color = colorScheme.onSurface,
-                    start = Offset(size.width / 2, 0f),
-                    end = Offset(size.width / 2, size.height),
+                    start = Offset(size.width / 2 + graphState.xOffset, 0f),
+                    end = Offset(size.width / 2 + graphState.xOffset, size.height),
                     strokeWidth = 2.dp.toPx()
                 )
 

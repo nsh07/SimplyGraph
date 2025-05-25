@@ -9,7 +9,9 @@ data class GraphState(
     val invalidations: Int = 0,
     val canvasSize: Size = Size(0f, 0f),
     val points: List<Offset> = emptyList(),
-    val xWidth: Int = 10
+    val xWidth: Int = 10,
+    val xOffset: Float = 0f,
+    val yOffset: Float = 0f
 )
 
 @Immutable

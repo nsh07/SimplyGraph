@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +24,7 @@ class UiViewModel : ViewModel() {
 
     private var nativeBridge = NativeBridge()
     private var calculationJob: Job? = null
+    private var updateJob: Job? = null
 
     fun updateFunction(function: String) {
         _functionsState.update { currentState ->
@@ -38,6 +40,25 @@ class UiViewModel : ViewModel() {
             currentState.copy(
                 canvasSize = size
             )
+        }
+        updateJob?.cancel()
+        updateJob = viewModelScope.launch {
+            delay(50)
+            updateGraph()
+        }
+    }
+
+    fun updateOffset(offsetChange: Offset) {
+        _graphState.update { currentState ->
+            currentState.copy(
+                xOffset = currentState.xOffset + offsetChange.x,
+                yOffset = currentState.yOffset + offsetChange.y
+            )
+        }
+        updateJob?.cancel()
+        updateJob = viewModelScope.launch {
+            delay(50)
+            updateGraph()
         }
     }
 
@@ -57,6 +78,8 @@ class UiViewModel : ViewModel() {
                     val graphPoints = nativeBridge.calculateGraphPoints(
                         xWidth = xWidth,
                         yWidth = yWidth.toDouble(),
+                        xOffset = graphState.value.xOffset.toDouble(),
+                        yOffset = graphState.value.yOffset.toDouble(),
                         canvasWidth = canvasSize.width.toDouble(),
                         canvasHeight = canvasSize.height.toDouble(),
                         function = function
