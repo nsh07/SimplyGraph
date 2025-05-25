@@ -115,7 +115,7 @@ fun AppScreen(modifier: Modifier = Modifier) {
             )
 
             // Draw the graph
-            if (graphState.points.size < 1000000)
+            if (graphState.points.size < 1000000) // Avoids out of memory errors in very dense graphs
                 drawPoints(
                     graphState.points,
                     pointMode =

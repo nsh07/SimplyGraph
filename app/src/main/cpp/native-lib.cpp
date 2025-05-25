@@ -57,6 +57,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         symbol_table symbolTable;
         symbolTable.add_variable("theta", theta);
         symbolTable.add_constants();
+        addConstants(symbolTable);
 
         expression expression;
         expression.register_symbol_table(symbolTable);
@@ -81,6 +82,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         symbol_table symbolTable;
         symbolTable.add_variable("x", x);
         symbolTable.add_constants();
+        addConstants(symbolTable);
 
         expression expression;
         expression.register_symbol_table(symbolTable);
@@ -117,6 +119,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         symbolTable.add_variable("x", x);
         symbolTable.add_variable("y", y);
         symbolTable.add_constants();
+        addConstants(symbolTable);
 
         expression lhsExpression, rhsExpression;
         lhsExpression.register_symbol_table(symbolTable);
