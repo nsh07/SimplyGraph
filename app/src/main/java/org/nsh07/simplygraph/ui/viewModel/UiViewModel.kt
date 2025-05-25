@@ -57,6 +57,16 @@ class UiViewModel : ViewModel() {
         }
     }
 
+    fun resetOffset() {
+        _graphState.update { currentState ->
+            currentState.copy(
+                xOffset = 0f,
+                yOffset = 0f
+            )
+        }
+        updateGraph()
+    }
+
     fun updateGraph() {
         if (functionsState.value.function.isNotEmpty()) {
             calculationJob?.cancel()

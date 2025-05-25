@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -19,6 +20,8 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.shapes
 import androidx.compose.material3.OutlinedTextField
@@ -33,10 +36,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PointMode
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.nsh07.simplygraph.R
 import org.nsh07.simplygraph.ui.theme.SimplyGraphTheme
 import org.nsh07.simplygraph.ui.viewModel.UiViewModel
 
@@ -89,42 +94,53 @@ fun AppScreen(modifier: Modifier = Modifier) {
         sheetPeekHeight = BottomSheetDefaults.SheetPeekHeight + 64.dp,
         modifier = modifier
     ) { insets ->
-        Canvas(
-            Modifier
-                .transformable(transformableState)
-                .clipToBounds()
-                .fillMaxSize()
-                .padding(bottom = insets.calculateBottomPadding())
-        ) {
-            viewModel.updateCanvasSize(size)
+        Box {
+            Canvas(
+                Modifier
+                    .transformable(transformableState)
+                    .clipToBounds()
+                    .fillMaxSize()
+                    .padding(bottom = insets.calculateBottomPadding())
+            ) {
+                viewModel.updateCanvasSize(size)
 
-            // Draw the x-axis
-            drawLine(
-                color = colorScheme.onSurface,
-                start = Offset(0f, size.height / 2 + graphState.yOffset),
-                end = Offset(size.width, size.height / 2 + graphState.yOffset),
-                strokeWidth = 2.dp.toPx()
-            )
-
-            // Draw the y-axis
-            drawLine(
-                color = colorScheme.onSurface,
-                start = Offset(size.width / 2 + graphState.xOffset, 0f),
-                end = Offset(size.width / 2 + graphState.xOffset, size.height),
-                strokeWidth = 2.dp.toPx()
-            )
-
-            // Draw the graph
-            if (graphState.points.size < 1000000) // Avoids out of memory errors in very dense graphs
-                drawPoints(
-                    graphState.points,
-                    pointMode =
-                        if (functionsState.function.contains('='))
-                            PointMode.Points
-                        else PointMode.Polygon,
-                    color = colorScheme.primary,
-                    strokeWidth = 3.dp.toPx()
+                // Draw the x-axis
+                drawLine(
+                    color = colorScheme.onSurface,
+                    start = Offset(0f, size.height / 2 + graphState.yOffset),
+                    end = Offset(size.width, size.height / 2 + graphState.yOffset),
+                    strokeWidth = 2.dp.toPx()
                 )
+
+                // Draw the y-axis
+                drawLine(
+                    color = colorScheme.onSurface,
+                    start = Offset(size.width / 2 + graphState.xOffset, 0f),
+                    end = Offset(size.width / 2 + graphState.xOffset, size.height),
+                    strokeWidth = 2.dp.toPx()
+                )
+
+                // Draw the graph
+                if (graphState.points.size < 1000000) // Avoids out of memory errors in very dense graphs
+                    drawPoints(
+                        graphState.points,
+                        pointMode =
+                            if (functionsState.function.contains('='))
+                                PointMode.Points
+                            else PointMode.Polygon,
+                        color = colorScheme.primary,
+                        strokeWidth = 3.dp.toPx()
+                    )
+            }
+            FloatingActionButton(
+                onClick = viewModel::resetOffset,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = insets.calculateBottomPadding())
+                    .padding(16.dp)
+            ) {
+                Icon(painterResource(R.drawable.home), contentDescription = "Reset to origin")
+            }
         }
     }
 }
