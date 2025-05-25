@@ -12,6 +12,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -66,7 +67,10 @@ fun AppScreen(modifier: Modifier = Modifier) {
                 drawPoints(
                     graphState.points,
                     pointMode =
-                        if (functionsState.function.contains('y'))
+                        if (
+                            functionsState.function.contains('y') ||
+                            functionsState.function.substringBefore('=').trim() == "r"
+                        )
                             PointMode.Points
                         else PointMode.Polygon,
                     color = colorScheme.primary,
@@ -82,6 +86,8 @@ fun AppScreen(modifier: Modifier = Modifier) {
                 OutlinedTextField(
                     value = functionsState.function,
                     onValueChange = viewModel::updateFunction,
+                    label = { Text("Function") },
+                    placeholder = { Text("f(x) | f(x, y) = g(x, y) | r = f(theta)") },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
