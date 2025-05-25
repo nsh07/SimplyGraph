@@ -67,13 +67,15 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         while (theta < 12 * M_PI) {
             r = expression.value();
             if (!std::isnan(r)) {
-                points.push_back(float(r * cos(theta) * xScaleFactor + canvasWidth / 2) + xOffset);
-                points.push_back(float(-r * sin(theta) * yScaleFactor + canvasHeight / 2) + yOffset);
+                points.push_back(float(r * cos(theta) * xScaleFactor + canvasWidth / 2 + xOffset));
+                points.push_back(
+                        float(-r * sin(theta) * yScaleFactor + canvasHeight / 2 + yOffset));
             }
             theta += 0.01; // Increment by roughly 0.5 degrees
         }
     } else if (!hasY) {
         // Explicit function of x (in the form f(x))
+
         double x;
 
         symbol_table symbolTable;
@@ -86,7 +88,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         parser parser;
         parser.compile(functionStr, expression);
 
-        for (int i = -xOffset; i <= canvasWidth - xOffset; i++) {
+        for (int i = int(-xOffset); i <= canvasWidth - xOffset; i++) {
             try {
                 // Calculate the value of x and y for the given i-pixel-offset
                 // x can be simply calculated by subtracting half of canvas width (to shift origin to half of the screen) and then scaling according to xWidth
@@ -99,16 +101,16 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
                 double y = (-expression.value() * yScaleFactor) + canvasHeight / 2;
 
                 if (!std::isnan(y)) {
-                    points.push_back(float(i) + xOffset);
-                    points.push_back(float(y) + yOffset);
+                    points.push_back(float(i + xOffset));
+                    points.push_back(float(y + yOffset));
                 }
             } catch (...) {
                 continue;
             }
         }
-    } else if (hasX) {
-        // Implicit function of x,y of the form f(x,y) = g(x,y) or f(x,y)
-        // (equality with y is implied in the second case)
+    } else if (equalsIndex != std::string::npos) {
+        // Implicit function of x of the form f(x,y) = g(x,y)
+
         double x, y;
 
         symbol_table symbolTable;
@@ -124,21 +126,16 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
 
         std::string lhs, rhs;
 
-        if (equalsIndex != std::string::npos) {
-            lhs = functionStr.substr(0, equalsIndex - 1);
-            rhs = functionStr.substr(equalsIndex + 1);
-        } else {
-            lhs = "y";
-            rhs = functionStr;
-        }
+        lhs = functionStr.substr(0, equalsIndex - 1);
+        rhs = functionStr.substr(equalsIndex + 1);
 
         lhsParser.compile(lhs, lhsExpression);
         rhsParser.compile(rhs, rhsExpression);
 
         // Iterate over every pixel on the canvas and evaluate LHS and RHS at each pixel
         // If they are equal, add the pixel to the list of points
-        for (int i = -xOffset; i <= canvasWidth - xOffset; i++) {
-            for (int j = -yOffset; j <= canvasHeight - yOffset; j++) {
+        for (int i = int(-xOffset); i <= canvasWidth - xOffset; i++) {
+            for (int j = int(-yOffset); j <= canvasHeight - yOffset; j++) {
                 try {
                     x = ((i - canvasWidth / 2) / canvasWidth) * xWidth;
                     y = (-(j - canvasHeight / 2) / canvasHeight) * yWidth;
@@ -148,8 +145,8 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
 
                     if (approxEqual(lhsVal, rhsVal, 0.01) && !std::isnan(lhsVal) &&
                         !std::isnan(rhsVal)) {
-                        points.push_back(float(i) + xOffset);
-                        points.push_back(float(j) + yOffset);
+                        points.push_back(float(i + xOffset));
+                        points.push_back(float(j + yOffset));
                     }
                 } catch (...) {
                     continue;

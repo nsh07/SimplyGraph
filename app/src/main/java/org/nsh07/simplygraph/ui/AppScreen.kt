@@ -115,18 +115,16 @@ fun AppScreen(modifier: Modifier = Modifier) {
             )
 
             // Draw the graph
-            drawPoints(
-                graphState.points,
-                pointMode =
-                    if (
-                        functionsState.function.contains('y') ||
-                        functionsState.function.substringBefore('=').trim() == "r"
-                    )
-                        PointMode.Points
-                    else PointMode.Polygon,
-                color = colorScheme.primary,
-                strokeWidth = 3.dp.toPx()
-            )
+            if (graphState.points.size < 1000000)
+                drawPoints(
+                    graphState.points,
+                    pointMode =
+                        if (functionsState.function.contains('='))
+                            PointMode.Points
+                        else PointMode.Polygon,
+                    color = colorScheme.primary,
+                    strokeWidth = 3.dp.toPx()
+                )
         }
     }
 }

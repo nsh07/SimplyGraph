@@ -70,20 +70,18 @@ class UiViewModel : ViewModel() {
                     val canvasSize = graphState.value.canvasSize
 
                     // We use the native C++ function for calculating graph points to plot faster
-                    val graphPoints = nativeBridge.calculateGraphPoints(
-                        xWidth = xWidth,
-                        yWidth = yWidth.toDouble(),
-                        xOffset = graphState.value.xOffset.toDouble(),
-                        yOffset = graphState.value.yOffset.toDouble(),
-                        canvasWidth = canvasSize.width.toDouble(),
-                        canvasHeight = canvasSize.height.toDouble(),
-                        function = function
-                    )
 
-                    val newPoints = graphPoints
-                        .toList()
-                        .chunked(2)
-                        .map { (x, y) -> Offset(x, y) }
+                    val newPoints = nativeBridge
+                        .calculateGraphPoints(
+                            xWidth = xWidth,
+                            yWidth = yWidth.toDouble(),
+                            xOffset = graphState.value.xOffset.toDouble(),
+                            yOffset = graphState.value.yOffset.toDouble(),
+                            canvasWidth = canvasSize.width.toDouble(),
+                            canvasHeight = canvasSize.height.toDouble(),
+                            function = function
+                        )
+                        .toOffsetList()
 
                     _graphState.update { currentState ->
                         currentState.copy(
@@ -102,5 +100,16 @@ class UiViewModel : ViewModel() {
                 }
             }
         }
+    }
+
+    fun FloatArray.toOffsetList(): List<Offset> {
+        val size = this.size
+        val result = ArrayList<Offset>(size / 2)
+        var i = 0
+        while (i + 1 < size) {
+            result.add(Offset(this[i], this[i + 1]))
+            i += 2
+        }
+        return result
     }
 }
