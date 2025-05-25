@@ -53,34 +53,24 @@ class UiViewModel : ViewModel() {
                     val function = functionsState.value.function
                     val canvasSize = graphState.value.canvasSize
 
-                    val hasY = function.contains('y')
-                    val hasX = function.contains('x')
-
-                    val newPoints = mutableListOf<Offset>()
-
                     // We use the native C++ function for calculating graph points to plot faster
                     val graphPoints = nativeBridge.calculateGraphPoints(
                         xWidth = xWidth,
                         yWidth = yWidth.toDouble(),
                         canvasWidth = canvasSize.width.toDouble(),
                         canvasHeight = canvasSize.height.toDouble(),
-                        function = function,
-                        hasY = hasY,
-                        hasX = hasX
+                        function = function
                     )
-                    newPoints.addAll(
-                        graphPoints
-                            .toList()
-                            .chunked(2)
-                            .map { (x, y) ->
-                                Offset(x, y)
-                            }
-                    )
+
+                    val newPoints = graphPoints
+                        .toList()
+                        .chunked(2)
+                        .map { (x, y) -> Offset(x, y) }
 
                     _graphState.update { currentState ->
                         currentState.copy(
                             invalidations = currentState.invalidations + 1,
-                            points = newPoints.toList()
+                            points = newPoints
                         )
                     }
                 } catch (e: Exception) {

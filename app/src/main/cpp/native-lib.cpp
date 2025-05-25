@@ -24,9 +24,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         jdouble yWidth,
         jdouble canvasWidth,
         jdouble canvasHeight,
-        jstring function,
-        jboolean hasY,
-        jboolean hasX
+        jstring function
 ) {
     double yScaleFactor = canvasHeight / yWidth;
     std::vector<float> points;
@@ -35,6 +33,9 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
     const char *convertedValue = (env)->GetStringUTFChars(function, &isCopy);
     std::string functionStr = convertedValue;
     (env)->ReleaseStringUTFChars(function, convertedValue);
+
+    bool hasX = functionStr.find('x') != std::string::npos;
+    bool hasY = functionStr.find('y') != std::string::npos;
 
     if (!hasY) {
         double x;
@@ -49,7 +50,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         parser parser;
         parser.compile(functionStr, expression);
 
-        for (double i = 0; i <= canvasWidth; i++) {
+        for (int i = 0; i <= canvasWidth; i++) {
             try {
                 // Calculate the value of x and y for the given i-pixel-offset
                 // x can be simply calculated by subtracting half of canvas width (to shift origin to half of the screen) and then scaling according to xWidth
@@ -62,8 +63,8 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
                 double y = (-expression.value() * yScaleFactor) + canvasHeight / 2;
 
                 if (!std::isnan(y)) {
-                    points.push_back(i);
-                    points.push_back(y);
+                    points.push_back(float(i));
+                    points.push_back(float(y));
                 }
             } catch (...) {
                 continue;
@@ -99,8 +100,8 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
 
         // Iterate over every pixel on the canvas and evaluate LHS and RHS at each pixel
         // If they are equal, add the pixel to the list of points
-        for (double i = 0; i <= canvasWidth; i++) {
-            for (double j = 0; j <= canvasHeight; j++) {
+        for (int i = 0; i <= canvasWidth; i++) {
+            for (int j = 0; j <= canvasHeight; j++) {
                 try {
                     x = ((i - canvasWidth / 2) / canvasWidth) * xWidth;
                     y = (-(j - canvasHeight / 2) / canvasHeight) * yWidth;
@@ -109,8 +110,8 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
                     double rhsVal = rhsExpression.value();
 
                     if (approxEqual(lhsVal, rhsVal, 0.01) && !std::isnan(lhsVal) && !std::isnan(rhsVal)) {
-                        points.push_back(i);
-                        points.push_back(j);
+                        points.push_back(float(i));
+                        points.push_back(float(j));
                     }
                 } catch (...) {
                     continue;
@@ -119,9 +120,9 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         }
     }
 
-    jfloatArray jpoints = env->NewFloatArray(points.size());
+    jfloatArray jpoints = env->NewFloatArray(jsize(points.size()));
     if (jpoints != nullptr) {
-        env->SetFloatArrayRegion(jpoints, 0, points.size(), points.data());
+        env->SetFloatArrayRegion(jpoints, 0, jsize(points.size()), points.data());
     }
 
     return jpoints;

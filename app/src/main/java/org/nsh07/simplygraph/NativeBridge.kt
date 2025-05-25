@@ -10,8 +10,6 @@ class NativeBridge {
         yWidth: Double,
         canvasWidth: Double,
         canvasHeight: Double,
-        function: String,
-        hasY: Boolean,
-        hasX: Boolean
+        function: String
     ): FloatArray
 }
