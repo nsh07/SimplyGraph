@@ -5,6 +5,7 @@
 #include <jni.h>
 
 #include <cmath>
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -37,42 +38,80 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
     std::string functionStr = convertedValue;
     (env)->ReleaseStringUTFChars(function, convertedValue);
 
-    auto equalsIndex = functionStr.find('=');
+    auto equalsPos = functionStr.find('=');
     bool hasX = functionStr.find('x') != std::string::npos;
     bool hasY = functionStr.find('y') != std::string::npos;
+    auto commaPos = functionStr.find(',');
 
-    std::string preEqual = functionStr.substr(0, equalsIndex - 1);
-    bool isPolar = !(hasX || hasY) && (equalsIndex != std::string::npos) && (trim(preEqual) == "r");
+    if (commaPos != std::string::npos) {
+        // Parametric equation
+        std::regex form(R"([\s]*\(.*,.*\)[\s]*)");
+        if (std::regex_match(functionStr, form)) {
+            double t = 0.0;
+            std::string x_s = functionStr.substr(0, commaPos);
+            x_s = x_s.substr(x_s.find('(') + 1);
+            std::string y_s = functionStr.substr(commaPos + 1);
+            y_s = y_s.substr(0, y_s.find_last_of(')'));
 
-    if (isPolar) {
-        /*
-        Polar equation
-        This is very easy to draw, the polar equation is of the form r = f(theta), we iterate over
-        various values of theta from 0 to 12pi, calculate r from the above equation, and add the point
-        (r * cos(theta), r * sin(theta)) to the graph (since x = r cos(theta) and y = r sin(theta))
-        */
-        double r, theta = 0.0;
-        std::string rhs = functionStr.substr(equalsIndex + 1);
+            symbol_table symbolTable;
+            symbolTable.add_variable("t", t);
+            symbolTable.add_constants();
+            addConstants(symbolTable);
 
-        symbol_table symbolTable;
-        symbolTable.add_variable("theta", theta);
-        symbolTable.add_constants();
-        addConstants(symbolTable);
+            expression xExpression, yExpression;
+            xExpression.register_symbol_table(symbolTable);
+            yExpression.register_symbol_table(symbolTable);
 
-        expression expression;
-        expression.register_symbol_table(symbolTable);
+            parser xParser, yParser;
+            xParser.compile(x_s, xExpression);
+            yParser.compile(y_s, yExpression);
 
-        parser parser;
-        parser.compile(rhs, expression);
+            while (t < 1) {
+                double x = xExpression.value() * xScaleFactor + canvasWidth / 2 + xOffset;
+                double y = -yExpression.value() * yScaleFactor + canvasHeight / 2 + yOffset;
 
-        while (theta < 12 * M_PI) {
-            r = expression.value();
-            if (!std::isnan(r)) {
-                points.push_back(float(r * cos(theta) * xScaleFactor + canvasWidth / 2 + xOffset));
-                points.push_back(
-                        float(-r * sin(theta) * yScaleFactor + canvasHeight / 2 + yOffset));
+                if (!std::isnan(x) && !std::isnan(y)) {
+                    points.push_back(float(x));
+                    points.push_back(float(y));
+                }
+                t += 0.01;
             }
-            theta += 0.01; // Increment by roughly 0.5 degrees
+        }
+    } else if (!hasX && !hasY) {
+        std::string preEqual = functionStr.substr(0, equalsPos - 1);
+        bool isPolar = (equalsPos != std::string::npos) && (trim(preEqual) == "r");
+
+        if (isPolar) {
+            /*
+            Polar equation
+            This is very easy to draw, the polar equation is of the form r = f(theta), we iterate over
+            various values of theta from 0 to 12pi, calculate r from the above equation, and add the point
+            (r * cos(theta), r * sin(theta)) to the graph (since x = r cos(theta) and y = r sin(theta))
+            */
+            double r, theta = 0.0;
+            std::string rhs = functionStr.substr(equalsPos + 1);
+
+            symbol_table symbolTable;
+            symbolTable.add_variable("theta", theta);
+            symbolTable.add_constants();
+            addConstants(symbolTable);
+
+            expression expression;
+            expression.register_symbol_table(symbolTable);
+
+            parser parser;
+            parser.compile(rhs, expression);
+
+            while (theta < 12 * M_PI) {
+                r = expression.value();
+                if (!std::isnan(r)) {
+                    points.push_back(
+                            float(r * cos(theta) * xScaleFactor + canvasWidth / 2 + xOffset));
+                    points.push_back(
+                            float(-r * sin(theta) * yScaleFactor + canvasHeight / 2 + yOffset));
+                }
+                theta += 0.01; // Increment by roughly 0.5 degrees
+            }
         }
     } else if (!hasY) {
         // Explicit function of x (in the form f(x))
@@ -110,7 +149,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
                 continue;
             }
         }
-    } else if (equalsIndex != std::string::npos) {
+    } else if (equalsPos != std::string::npos) {
         // Implicit function of x of the form f(x,y) = g(x,y)
 
         double x, y;
@@ -129,8 +168,8 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
 
         std::string lhs, rhs;
 
-        lhs = functionStr.substr(0, equalsIndex - 1);
-        rhs = functionStr.substr(equalsIndex + 1);
+        lhs = functionStr.substr(0, equalsPos - 1);
+        rhs = functionStr.substr(equalsPos + 1);
 
         lhsParser.compile(lhs, lhsExpression);
         rhsParser.compile(rhs, rhsExpression);
