@@ -16,5 +16,7 @@ data class GraphState(
 
 @Immutable
 data class FunctionsState(
-    val function: String
+    val function: String,
+    val tStart: String = "0",
+    val tEnd: String = "1"
 )

@@ -1,12 +1,16 @@
 package org.nsh07.simplygraph.ui
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -15,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
@@ -22,8 +27,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.motionScheme
 import androidx.compose.material3.MaterialTheme.shapes
+import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
@@ -38,6 +46,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -57,21 +66,35 @@ fun AppScreen(modifier: Modifier = Modifier) {
     val transformableState = rememberTransformableState { _, offsetChange, _ ->
         viewModel.updateOffset(offsetChange)
     }
-    val scaffolState = rememberBottomSheetScaffoldState()
+    val scaffoldState = rememberBottomSheetScaffoldState()
     val topSpacing by animateDpAsState(
-        if (scaffolState.bottomSheetState.targetValue == SheetValue.Expanded)
+        if (scaffoldState.bottomSheetState.targetValue == SheetValue.Expanded)
             WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
-        else 0.dp
+        else 0.dp,
+        animationSpec = motionScheme.defaultSpatialSpec()
+    )
+    val bottomSpacing by animateDpAsState(
+        if (
+            scaffoldState.bottomSheetState.targetValue == SheetValue.PartiallyExpanded &&
+            !functionsState.function.contains(',')
+        )
+            WindowInsets.systemBars.asPaddingValues().calculateBottomPadding() + 16.dp
+        else 16.dp,
+        animationSpec = motionScheme.defaultSpatialSpec()
+    )
+    val sheetPeekHeight by animateDpAsState(
+        if (functionsState.function.contains(',')) 164.dp
+        else 64.dp,
+        animationSpec = motionScheme.defaultSpatialSpec()
     )
 
     BottomSheetScaffold(
-        scaffoldState = scaffolState,
+        scaffoldState = scaffoldState,
         sheetContent = {
             Column(
                 Modifier
                     .padding(16.dp)
-                    .fillMaxSize(),
-                horizontalAlignment = Alignment.End
+                    .fillMaxSize()
             ) {
                 Spacer(Modifier.height(topSpacing))
                 OutlinedTextField(
@@ -83,15 +106,45 @@ fun AppScreen(modifier: Modifier = Modifier) {
                     shape = shapes.large,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(
-                    Modifier.height(
-                        WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
-                    )
-                )
+                AnimatedVisibility(
+                    functionsState.function.contains(','),
+                    enter = fadeIn(motionScheme.defaultEffectsSpec()),
+                    exit = fadeOut(motionScheme.defaultEffectsSpec())
+                ) {
+                    Column {
+                        Spacer(Modifier.height(bottomSpacing))
+                        Text(
+                            "Parameter interval",
+                            style = typography.titleSmall,
+                            modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                        )
+                        Row {
+                            OutlinedTextField(
+                                value = functionsState.tStart,
+                                textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.End),
+                                suffix = { Text(" ⩽ t") },
+                                onValueChange = { viewModel.updateTInterval(start = it) },
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                shape = shapes.large,
+                                modifier = Modifier.width(128.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            OutlinedTextField(
+                                value = functionsState.tEnd,
+                                textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Start),
+                                prefix = { Text("t ⩽ ") },
+                                onValueChange = { viewModel.updateTInterval(end = it) },
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                shape = shapes.large,
+                                modifier = Modifier.width(128.dp)
+                            )
+                        }
+                    }
+                }
             }
         },
         sheetDragHandle = null,
-        sheetPeekHeight = BottomSheetDefaults.SheetPeekHeight + 64.dp,
+        sheetPeekHeight = BottomSheetDefaults.SheetPeekHeight + sheetPeekHeight,
         modifier = modifier
     ) { insets ->
         Box {
@@ -121,7 +174,7 @@ fun AppScreen(modifier: Modifier = Modifier) {
                 )
 
                 // Draw the graph
-                if (graphState.points.size < 1000000) // Avoids out of memory errors in very dense graphs
+                if (graphState.points.size < 500000) // Avoids out of memory errors in very dense graphs
                     drawPoints(
                         graphState.points,
                         pointMode =

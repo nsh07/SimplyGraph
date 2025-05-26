@@ -67,6 +67,19 @@ class UiViewModel : ViewModel() {
         updateGraph()
     }
 
+    fun updateTInterval(
+        start: String = functionsState.value.tStart,
+        end: String = functionsState.value.tEnd
+    ) {
+        _functionsState.update { currentState ->
+            currentState.copy(
+                tStart = start,
+                tEnd = end
+            )
+        }
+        updateGraph()
+    }
+
     fun updateGraph() {
         if (functionsState.value.function.isNotEmpty()) {
             calculationJob?.cancel()
@@ -89,6 +102,8 @@ class UiViewModel : ViewModel() {
                             yOffset = graphState.value.yOffset.toDouble(),
                             canvasWidth = canvasSize.width.toDouble(),
                             canvasHeight = canvasSize.height.toDouble(),
+                            tStart = functionsState.value.tStart,
+                            tEnd = functionsState.value.tEnd,
                             function = function
                         )
                         .toOffsetList()

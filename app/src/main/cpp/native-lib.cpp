@@ -16,6 +16,8 @@ typedef exprtk::symbol_table<double> symbol_table;
 typedef exprtk::expression<double> expression;
 typedef exprtk::parser<double> parser;
 
+std::string jstring2string(JNIEnv *env, jstring jStr);
+
 extern "C"
 JNIEXPORT jfloatArray JNICALL
 Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
@@ -27,16 +29,15 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         jdouble yOffset,
         jdouble canvasWidth,
         jdouble canvasHeight,
+        jstring tStart,
+        jstring tEnd,
         jstring function
 ) {
     double xScaleFactor = canvasWidth / xWidth;
     double yScaleFactor = canvasHeight / yWidth;
     std::vector<float> points;
 
-    jboolean isCopy;
-    const char *convertedValue = (env)->GetStringUTFChars(function, &isCopy);
-    std::string functionStr = convertedValue;
-    (env)->ReleaseStringUTFChars(function, convertedValue);
+    std::string functionStr = jstring2string(env, function);
 
     auto equalsPos = functionStr.find('=');
     bool hasX = functionStr.find('x') != std::string::npos;
@@ -47,7 +48,25 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         // Parametric equation
         std::regex form(R"([\s]*\(.*,.*\)[\s]*)");
         if (std::regex_match(functionStr, form)) {
-            double t = 0.0;
+            // We evaluate and set the intervals for t first
+            std::string tStartStr =
+                    jstring2string(env, tStart), tEndStr = jstring2string(env, tEnd);
+
+            symbol_table intervalSymbolTable;
+            intervalSymbolTable.add_constants();
+            addConstants(intervalSymbolTable);
+
+            expression tStartExpression, tEndExpression;
+            tStartExpression.register_symbol_table(intervalSymbolTable);
+            tEndExpression.register_symbol_table(intervalSymbolTable);
+
+            parser tStartParser, tEndParser;
+            tStartParser.compile(tStartStr, tStartExpression);
+            tEndParser.compile(tEndStr, tEndExpression);
+
+            double t = tStartExpression.value();
+            double tEndVal = tEndExpression.value();
+
             std::string x_s = functionStr.substr(0, commaPos);
             x_s = x_s.substr(x_s.find('(') + 1);
             std::string y_s = functionStr.substr(commaPos + 1);
@@ -66,7 +85,8 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
             xParser.compile(x_s, xExpression);
             yParser.compile(y_s, yExpression);
 
-            while (t < 1) {
+            double tIncr = abs((tEndVal - t) / canvasWidth);
+            while (t <= tEndVal) {
                 double x = xExpression.value() * xScaleFactor + canvasWidth / 2 + xOffset;
                 double y = -yExpression.value() * yScaleFactor + canvasHeight / 2 + yOffset;
 
@@ -74,7 +94,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
                     points.push_back(float(x));
                     points.push_back(float(y));
                 }
-                t += 0.01;
+                t += tIncr;
             }
         }
     } else if (!hasX && !hasY) {
@@ -203,4 +223,12 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
     }
 
     return jpoints;
+}
+
+std::string jstring2string(JNIEnv *env, jstring jStr) {
+    jboolean isCopy;
+    const char *convertedValue = (env)->GetStringUTFChars(jStr, &isCopy);
+    std::string str = convertedValue;
+    (env)->ReleaseStringUTFChars(jStr, convertedValue);
+    return str;
 }
