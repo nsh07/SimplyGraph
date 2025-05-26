@@ -41,6 +41,11 @@ class UiViewModel : ViewModel() {
                 canvasSize = size
             )
         }
+        updateJob?.cancel()
+        updateJob = viewModelScope.launch {
+            delay(50)
+            updateGraph()
+        }
     }
 
     fun updateOffset(offsetChange: Offset) {
