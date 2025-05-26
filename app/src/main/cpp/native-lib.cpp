@@ -31,6 +31,8 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         jdouble canvasHeight,
         jstring tStart,
         jstring tEnd,
+        jstring thetaStart,
+        jstring thetaEnd,
         jstring function
 ) {
     double xScaleFactor = canvasWidth / xWidth;
@@ -67,6 +69,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
             double t = tStartExpression.value();
             double tEndVal = tEndExpression.value();
 
+            // Now we set up the function parsers
             std::string x_s = functionStr.substr(0, commaPos);
             x_s = x_s.substr(x_s.find('(') + 1);
             std::string y_s = functionStr.substr(commaPos + 1);
@@ -85,7 +88,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
             xParser.compile(x_s, xExpression);
             yParser.compile(y_s, yExpression);
 
-            double tIncr = abs((tEndVal - t) / canvasWidth);
+            double tIncr = abs((tEndVal - t) / (canvasWidth * 2));
             while (t <= tEndVal) {
                 double x = xExpression.value() * xScaleFactor + canvasWidth / 2 + xOffset;
                 double y = -yExpression.value() * yScaleFactor + canvasHeight / 2 + yOffset;
@@ -108,7 +111,27 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
             various values of theta from 0 to 12pi, calculate r from the above equation, and add the point
             (r * cos(theta), r * sin(theta)) to the graph (since x = r cos(theta) and y = r sin(theta))
             */
-            double r, theta = 0.0;
+            // We evaluate and set the intervals for theta first
+            std::string thetaStartStr =
+                    jstring2string(env, thetaStart), thetaEndStr = jstring2string(env, thetaEnd);
+
+            symbol_table intervalSymbolTable;
+            intervalSymbolTable.add_constants();
+            addConstants(intervalSymbolTable);
+
+            expression thetaStartExpression, thetaEndExpression;
+            thetaStartExpression.register_symbol_table(intervalSymbolTable);
+            thetaEndExpression.register_symbol_table(intervalSymbolTable);
+
+            parser thetaStartParser, thetaEndParser;
+            thetaStartParser.compile(thetaStartStr, thetaStartExpression);
+            thetaEndParser.compile(thetaEndStr, thetaEndExpression);
+
+            double theta = thetaStartExpression.value();
+            double thetaEndVal = thetaEndExpression.value();
+
+            // Now we set up the parser for calculating r
+            double r;
             std::string rhs = functionStr.substr(equalsPos + 1);
 
             symbol_table symbolTable;
@@ -122,7 +145,8 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
             parser parser;
             parser.compile(rhs, expression);
 
-            while (theta < 12 * M_PI) {
+            double thetaIncr = abs((thetaEndVal - theta) / (canvasWidth * 2));
+            while (theta <= thetaEndVal) {
                 r = expression.value();
                 if (!std::isnan(r)) {
                     points.push_back(
@@ -130,7 +154,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
                     points.push_back(
                             float(-r * sin(theta) * yScaleFactor + canvasHeight / 2 + yOffset));
                 }
-                theta += 0.01; // Increment by roughly 0.5 degrees
+                theta += thetaIncr;
             }
         }
     } else if (!hasY) {

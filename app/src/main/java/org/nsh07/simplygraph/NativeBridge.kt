@@ -14,6 +14,8 @@ class NativeBridge {
         canvasHeight: Double,
         tStart: String,
         tEnd: String,
+        thetaStart: String,
+        thetaEnd: String,
         function: String
     ): FloatArray
 }

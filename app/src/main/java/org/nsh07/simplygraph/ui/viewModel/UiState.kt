@@ -11,12 +11,15 @@ data class GraphState(
     val points: List<Offset> = emptyList(),
     val xWidth: Int = 10,
     val xOffset: Float = 0f,
-    val yOffset: Float = 0f
+    val yOffset: Float = 0f,
+    val connectPoints: Boolean = true
 )
 
 @Immutable
 data class FunctionsState(
     val function: String,
     val tStart: String = "0",
-    val tEnd: String = "1"
+    val tEnd: String = "1",
+    val thetaStart: String = "0",
+    val thetaEnd: String = "12pi"
 )

@@ -1,10 +1,9 @@
 package org.nsh07.simplygraph.ui
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -18,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
@@ -34,6 +34,8 @@ import androidx.compose.material3.MaterialTheme.shapes
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
@@ -76,14 +78,14 @@ fun AppScreen(modifier: Modifier = Modifier) {
     val bottomSpacing by animateDpAsState(
         if (
             scaffoldState.bottomSheetState.targetValue == SheetValue.PartiallyExpanded &&
-            !functionsState.function.contains(',')
+            !functionsState.function.contains("r\\s*=|,".toRegex())
         )
             WindowInsets.systemBars.asPaddingValues().calculateBottomPadding() + 16.dp
         else 16.dp,
         animationSpec = motionScheme.defaultSpatialSpec()
     )
     val sheetPeekHeight by animateDpAsState(
-        if (functionsState.function.contains(',')) 164.dp
+        if (functionsState.function.contains("r\\s*=|,".toRegex())) 164.dp
         else 64.dp,
         animationSpec = motionScheme.defaultSpatialSpec()
     )
@@ -106,38 +108,122 @@ fun AppScreen(modifier: Modifier = Modifier) {
                     shape = shapes.large,
                     modifier = Modifier.fillMaxWidth()
                 )
-                AnimatedVisibility(
-                    functionsState.function.contains(','),
-                    enter = fadeIn(motionScheme.defaultEffectsSpec()),
-                    exit = fadeOut(motionScheme.defaultEffectsSpec())
-                ) {
-                    Column {
-                        Spacer(Modifier.height(bottomSpacing))
-                        Text(
-                            "Parameter interval",
-                            style = typography.titleSmall,
-                            modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
-                        )
-                        Row {
-                            OutlinedTextField(
-                                value = functionsState.tStart,
-                                textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.End),
-                                suffix = { Text(" ⩽ t") },
-                                onValueChange = { viewModel.updateTInterval(start = it) },
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                                shape = shapes.large,
-                                modifier = Modifier.width(128.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            OutlinedTextField(
-                                value = functionsState.tEnd,
-                                textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Start),
-                                prefix = { Text("t ⩽ ") },
-                                onValueChange = { viewModel.updateTInterval(end = it) },
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                shape = shapes.large,
-                                modifier = Modifier.width(128.dp)
-                            )
+                AnimatedVisibility(functionsState.function.contains("r\\s*=|,".toRegex())) {
+                    AnimatedContent(
+                        functionsState.function
+                    ) {
+                        if (it.contains(',')) {
+                            Row {
+                                Column {
+                                    Spacer(Modifier.height(bottomSpacing))
+                                    Text(
+                                        "Parameter interval",
+                                        style = typography.titleSmall,
+                                        modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                                    )
+                                    Row {
+                                        OutlinedTextField(
+                                            value = functionsState.tStart,
+                                            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.End),
+                                            suffix = { Text(" ⩽ t") },
+                                            onValueChange = { viewModel.updateTInterval(start = it) },
+                                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                            shape = shapes.large,
+                                            modifier = Modifier.width(128.dp)
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        OutlinedTextField(
+                                            value = functionsState.tEnd,
+                                            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Start),
+                                            prefix = { Text("t ⩽ ") },
+                                            onValueChange = { viewModel.updateTInterval(end = it) },
+                                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                            shape = shapes.large,
+                                            modifier = Modifier.width(128.dp)
+                                        )
+                                    }
+                                }
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.padding(start = 8.dp)
+                                ) {
+                                    Spacer(Modifier.height(bottomSpacing))
+                                    Text(
+                                        "Connect points",
+                                        style = typography.titleSmall,
+                                        modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                                    )
+                                    Switch(
+                                        checked = graphState.connectPoints,
+                                        onCheckedChange = viewModel::setConnectPoints,
+                                        thumbContent = {
+                                            if (graphState.connectPoints) {
+                                                Icon(
+                                                    painterResource(R.drawable.check),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        } else if (functionsState.function.contains("r\\s*=".toRegex())) {
+                            Row {
+                                Column {
+                                    Spacer(Modifier.height(bottomSpacing))
+                                    Text(
+                                        "Theta (angle) interval",
+                                        style = typography.titleSmall,
+                                        modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                                    )
+                                    Row {
+                                        OutlinedTextField(
+                                            value = functionsState.thetaStart,
+                                            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.End),
+                                            suffix = { Text(" ⩽ θ") },
+                                            onValueChange = { viewModel.updateThetaInterval(start = it) },
+                                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                            shape = shapes.large,
+                                            modifier = Modifier.width(128.dp)
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        OutlinedTextField(
+                                            value = functionsState.thetaEnd,
+                                            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Start),
+                                            prefix = { Text("θ ⩽ ") },
+                                            onValueChange = { viewModel.updateThetaInterval(end = it) },
+                                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                            shape = shapes.large,
+                                            modifier = Modifier.width(128.dp)
+                                        )
+                                    }
+                                }
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.padding(start = 8.dp)
+                                ) {
+                                    Spacer(Modifier.height(bottomSpacing))
+                                    Text(
+                                        "Connect points",
+                                        style = typography.titleSmall,
+                                        modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                                    )
+                                    Switch(
+                                        checked = graphState.connectPoints,
+                                        onCheckedChange = viewModel::setConnectPoints,
+                                        thumbContent = {
+                                            if (graphState.connectPoints) {
+                                                Icon(
+                                                    painterResource(R.drawable.check),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -178,7 +264,7 @@ fun AppScreen(modifier: Modifier = Modifier) {
                     drawPoints(
                         graphState.points,
                         pointMode =
-                            if (functionsState.function.contains('y'))
+                            if (functionsState.function.contains('y') || !graphState.connectPoints)
                                 PointMode.Points
                             else PointMode.Polygon,
                         color = colorScheme.primary,

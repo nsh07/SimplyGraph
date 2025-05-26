@@ -72,6 +72,12 @@ class UiViewModel : ViewModel() {
         updateGraph()
     }
 
+    fun setConnectPoints(value: Boolean) {
+        _graphState.update { currentState ->
+            currentState.copy(connectPoints = value)
+        }
+    }
+
     fun updateTInterval(
         start: String = functionsState.value.tStart,
         end: String = functionsState.value.tEnd
@@ -80,6 +86,19 @@ class UiViewModel : ViewModel() {
             currentState.copy(
                 tStart = start,
                 tEnd = end
+            )
+        }
+        updateGraph()
+    }
+
+    fun updateThetaInterval(
+        start: String = functionsState.value.thetaStart,
+        end: String = functionsState.value.thetaEnd
+    ) {
+        _functionsState.update { currentState ->
+            currentState.copy(
+                thetaStart = start,
+                thetaEnd = end
             )
         }
         updateGraph()
@@ -109,6 +128,8 @@ class UiViewModel : ViewModel() {
                             canvasHeight = canvasSize.height.toDouble(),
                             tStart = functionsState.value.tStart,
                             tEnd = functionsState.value.tEnd,
+                            thetaStart = functionsState.value.thetaStart,
+                            thetaEnd = functionsState.value.thetaEnd,
                             function = function
                         )
                         .toOffsetList()
