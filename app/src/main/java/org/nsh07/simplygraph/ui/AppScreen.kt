@@ -125,7 +125,7 @@ fun AppScreen(modifier: Modifier = Modifier) {
                     drawPoints(
                         graphState.points,
                         pointMode =
-                            if (functionsState.function.contains('='))
+                            if (functionsState.function.contains('y'))
                                 PointMode.Points
                             else PointMode.Polygon,
                         color = colorScheme.primary,
