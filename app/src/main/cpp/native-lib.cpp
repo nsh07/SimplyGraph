@@ -241,12 +241,16 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         }
     }
 
-    jfloatArray jpoints = env->NewFloatArray(jsize(points.size()));
-    if (jpoints != nullptr) {
-        env->SetFloatArrayRegion(jpoints, 0, jsize(points.size()), points.data());
+    if (points.size() < 100000) { // Avoids out of memory errors in very dense graphs
+        jfloatArray jpoints = env->NewFloatArray(jsize(points.size()));
+        if (jpoints != nullptr) {
+            env->SetFloatArrayRegion(jpoints, 0, jsize(points.size()), points.data());
+        }
+
+        return jpoints;
     }
 
-    return jpoints;
+    return jfloatArray();
 }
 
 std::string jstring2string(JNIEnv *env, jstring jStr) {

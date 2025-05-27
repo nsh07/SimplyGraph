@@ -248,7 +248,8 @@ fun AppScreen(modifier: Modifier = Modifier) {
                     .fillMaxSize()
                     .padding(bottom = insets.calculateBottomPadding())
             ) {
-                viewModel.updateCanvasSize(size)
+                if (graphState.canvasSize != size)
+                    viewModel.updateCanvasSize(size)
 
                 // Draw the x-axis
                 drawLine(
@@ -267,16 +268,15 @@ fun AppScreen(modifier: Modifier = Modifier) {
                 )
 
                 // Draw the graph
-                if (graphState.points.size < 500000) // Avoids out of memory errors in very dense graphs
-                    drawPoints(
-                        graphState.points,
-                        pointMode =
-                            if (functionsState.function.contains('y') || !graphState.connectPoints)
-                                PointMode.Points
-                            else PointMode.Polygon,
-                        color = colorScheme.primary,
-                        strokeWidth = 3.dp.toPx()
-                    )
+                drawPoints(
+                    graphState.points,
+                    pointMode =
+                        if (functionsState.function.contains('y') || !graphState.connectPoints)
+                            PointMode.Points
+                        else PointMode.Polygon,
+                    color = colorScheme.primary,
+                    strokeWidth = 3.dp.toPx()
+                )
             }
             FloatingActionButton(
                 onClick = viewModel::resetOffset,
