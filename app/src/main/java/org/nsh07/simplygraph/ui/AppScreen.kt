@@ -37,6 +37,7 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -283,8 +284,12 @@ fun AppScreen(modifier: Modifier = Modifier) {
                     .align(Alignment.BottomEnd)
                     .padding(bottom = insets.calculateBottomPadding())
                     .padding(16.dp)
+                    .animateFloatingActionButton(
+                        graphState.xOffset != 0f || graphState.yOffset != 0f,
+                        Alignment.BottomEnd
+                    )
             ) {
-                Icon(painterResource(R.drawable.home), contentDescription = "Reset to origin")
+                Icon(painterResource(R.drawable.origin), contentDescription = "Reset to origin")
             }
         }
     }
