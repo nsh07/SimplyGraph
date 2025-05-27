@@ -42,6 +42,7 @@ import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -65,6 +66,12 @@ fun AppScreen(modifier: Modifier = Modifier) {
     val graphState by viewModel.graphState.collectAsState()
     val functionsState by viewModel.functionsState.collectAsState()
 
+    val expandSheet = remember(functionsState.function) {
+        functionsState.function.matches(
+            "\\s*r\\s*=\\s*\\S+\\s*|\\s*\\(\\s*\\S+\\s*,\\s*\\S+\\s*\\)\\s*".toRegex()
+        )
+    }
+
     val colorScheme = colorScheme
     val transformableState = rememberTransformableState { _, offsetChange, _ ->
         viewModel.updateOffset(offsetChange)
@@ -79,14 +86,14 @@ fun AppScreen(modifier: Modifier = Modifier) {
     val bottomSpacing by animateDpAsState(
         if (
             scaffoldState.bottomSheetState.targetValue == SheetValue.PartiallyExpanded &&
-            !functionsState.function.contains("r\\s*=|,".toRegex())
+            !expandSheet
         )
             WindowInsets.systemBars.asPaddingValues().calculateBottomPadding() + 16.dp
         else 16.dp,
         animationSpec = motionScheme.defaultSpatialSpec()
     )
     val sheetPeekHeight by animateDpAsState(
-        if (functionsState.function.contains("r\\s*=|,".toRegex())) 164.dp
+        if (expandSheet) 164.dp
         else 64.dp,
         animationSpec = motionScheme.defaultSpatialSpec()
     )
@@ -109,7 +116,7 @@ fun AppScreen(modifier: Modifier = Modifier) {
                     shape = shapes.large,
                     modifier = Modifier.fillMaxWidth()
                 )
-                AnimatedVisibility(functionsState.function.contains("r\\s*=|,".toRegex())) {
+                AnimatedVisibility(expandSheet) {
                     AnimatedContent(functionsState.function.contains(',')) {
                         when (it) {
                             true -> {
