@@ -18,6 +18,9 @@ typedef exprtk::parser<double> parser;
 
 std::string jstring2string(JNIEnv *env, jstring jStr);
 
+template<typename T>
+void removeAlternatingPairs(std::vector<T> &vec);
+
 extern "C"
 JNIEXPORT jfloatArray JNICALL
 Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
@@ -101,7 +104,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
             }
         }
     } else if (!hasX && !hasY) {
-        std::string preEqual = functionStr.substr(0, equalsPos - 1);
+        std::string preEqual = functionStr.substr(0, equalsPos);
         bool isPolar = (equalsPos != std::string::npos) && (trim(preEqual) == "r");
 
         if (isPolar) {
@@ -212,7 +215,7 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
 
         std::string lhs, rhs;
 
-        lhs = functionStr.substr(0, equalsPos - 1);
+        lhs = functionStr.substr(0, equalsPos);
         rhs = functionStr.substr(equalsPos + 1);
 
         lhsParser.compile(lhs, lhsExpression);
@@ -241,16 +244,16 @@ Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         }
     }
 
-    if (points.size() < 100000) { // Avoids out of memory errors in very dense graphs
-        jfloatArray jpoints = env->NewFloatArray(jsize(points.size()));
-        if (jpoints != nullptr) {
-            env->SetFloatArrayRegion(jpoints, 0, jsize(points.size()), points.data());
-        }
-
-        return jpoints;
+    while (points.size() > 100000) {
+        removeAlternatingPairs(points);
     }
 
-    return jfloatArray();
+    jfloatArray jpoints = env->NewFloatArray(jsize(points.size()));
+    if (jpoints != nullptr) {
+        env->SetFloatArrayRegion(jpoints, 0, jsize(points.size()), points.data());
+    }
+
+    return jpoints;
 }
 
 std::string jstring2string(JNIEnv *env, jstring jStr) {
@@ -259,4 +262,23 @@ std::string jstring2string(JNIEnv *env, jstring jStr) {
     std::string str = convertedValue;
     (env)->ReleaseStringUTFChars(jStr, convertedValue);
     return str;
+}
+
+template<typename T>
+void removeAlternatingPairs(std::vector<T> &vec) {
+    std::vector<T> result;
+    long i = 0;
+    long n = vec.size();
+
+    while (i < n) {
+        // Copy two elements (i.e., keep them)
+        for (int j = 0; j < 2 && i < n; ++j, ++i) {
+            result.push_back(vec[i]);
+        }
+
+        // Skip next two elements (i.e., remove them)
+        i += 2;
+    }
+
+    vec = std::move(result); // Replace original vector with filtered one
 }
