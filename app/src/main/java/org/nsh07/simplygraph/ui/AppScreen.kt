@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PointMode
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -68,7 +69,7 @@ fun AppScreen(modifier: Modifier = Modifier) {
 
     val expandSheet = remember(functionsState.function) {
         functionsState.function.matches(
-            "\\s*r\\s*=\\s*\\S+\\s*|\\s*\\(\\s*\\S+\\s*,\\s*\\S+\\s*\\)\\s*".toRegex()
+            "\\s*r\\s*=.+|\\s*\\(.+,.+\\)\\s*".toRegex()
         )
     }
 
@@ -282,7 +283,8 @@ fun AppScreen(modifier: Modifier = Modifier) {
                             PointMode.Points
                         else PointMode.Polygon,
                     color = colorScheme.primary,
-                    strokeWidth = 3.dp.toPx()
+                    strokeWidth = 3.dp.toPx(),
+                    cap = StrokeCap.Round
                 )
             }
             FloatingActionButton(
