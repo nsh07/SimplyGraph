@@ -6,7 +6,7 @@ class NativeBridge {
     }
 
     external fun calculateGraphPoints(
-        xWidth: Int,
+        xWidth: Double,
         yWidth: Double,
         xOffset: Double,
         yOffset: Double,

@@ -74,8 +74,8 @@ fun AppScreen(modifier: Modifier = Modifier) {
     }
 
     val colorScheme = colorScheme
-    val transformableState = rememberTransformableState { _, offsetChange, _ ->
-        viewModel.updateOffset(offsetChange)
+    val transformableState = rememberTransformableState { scaleChange, offsetChange, _ ->
+        viewModel.updateScaleOffset(scaleChange, offsetChange)
     }
     val scaffoldState = rememberBottomSheetScaffoldState()
     val topSpacing by animateDpAsState(
@@ -288,7 +288,7 @@ fun AppScreen(modifier: Modifier = Modifier) {
                 )
             }
             FloatingActionButton(
-                onClick = viewModel::resetOffset,
+                onClick = viewModel::resetOrigin,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(bottom = insets.calculateBottomPadding())

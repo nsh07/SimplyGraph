@@ -4,7 +4,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -23,8 +22,7 @@ class UiViewModel : ViewModel() {
     val functionsState: StateFlow<FunctionsState> = _functionsState.asStateFlow()
 
     private var nativeBridge = NativeBridge()
-    private var calculationJob: Job? = null
-    private var updateJob: Job? = null
+    private var reloadJob: Job? = null
 
     fun updateFunction(function: String) {
         _functionsState.update { currentState ->
@@ -41,32 +39,31 @@ class UiViewModel : ViewModel() {
                 canvasSize = size
             )
         }
-        updateJob?.cancel()
-        updateJob = viewModelScope.launch {
-            delay(50)
-            updateGraph()
-        }
+        updateGraph()
     }
 
-    fun updateOffset(offsetChange: Offset) {
+    fun updateScaleOffset(scaleChange: Float, offsetChange: Offset) {
         _graphState.update { currentState ->
             currentState.copy(
                 xOffset = currentState.xOffset + offsetChange.x,
-                yOffset = currentState.yOffset + offsetChange.y
+                yOffset = currentState.yOffset + offsetChange.y,
+                xWidth = currentState.xWidth / scaleChange
             )
         }
-        updateJob?.cancel()
-        updateJob = viewModelScope.launch {
-            delay(50)
-            updateGraph()
+        if (reloadJob?.isActive != true) {
+            reloadJob = viewModelScope.launch {
+                updateGraph()
+                delay(16) // Limit to roughly 60fps max
+            }
         }
     }
 
-    fun resetOffset() {
+    fun resetOrigin() {
         _graphState.update { currentState ->
             currentState.copy(
                 xOffset = 0f,
-                yOffset = 0f
+                yOffset = 0f,
+                xWidth = 10f
             )
         }
         updateGraph()
@@ -106,48 +103,36 @@ class UiViewModel : ViewModel() {
 
     fun updateGraph() {
         if (functionsState.value.function.isNotEmpty()) {
-            calculationJob?.cancel()
-            calculationJob = viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    val xWidth =
-                        graphState.value.xWidth // Number of integral x-coordinates visible on screen
-                    val yWidth =
-                        xWidth * (graphState.value.canvasSize.height / graphState.value.canvasSize.width)
-                    val function = functionsState.value.function
-                    val canvasSize = graphState.value.canvasSize
+            viewModelScope.launch(Dispatchers.IO) {
+                val xWidth =
+                    graphState.value.xWidth // Number of integral x-coordinates visible on screen
+                val yWidth =
+                    xWidth * (graphState.value.canvasSize.height / graphState.value.canvasSize.width)
+                val function = functionsState.value.function
+                val canvasSize = graphState.value.canvasSize
 
-                    // We use the native C++ function for calculating graph points to plot faster
+                // We use the native C++ function for calculating graph points to plot faster
+                val newPoints = nativeBridge
+                    .calculateGraphPoints(
+                        xWidth = xWidth.toDouble(),
+                        yWidth = yWidth.toDouble(),
+                        xOffset = graphState.value.xOffset.toDouble(),
+                        yOffset = graphState.value.yOffset.toDouble(),
+                        canvasWidth = canvasSize.width.toDouble(),
+                        canvasHeight = canvasSize.height.toDouble(),
+                        tStart = functionsState.value.tStart,
+                        tEnd = functionsState.value.tEnd,
+                        thetaStart = functionsState.value.thetaStart,
+                        thetaEnd = functionsState.value.thetaEnd,
+                        function = function
+                    )
+                    .toOffsetList()
 
-                    val newPoints = nativeBridge
-                        .calculateGraphPoints(
-                            xWidth = xWidth,
-                            yWidth = yWidth.toDouble(),
-                            xOffset = graphState.value.xOffset.toDouble(),
-                            yOffset = graphState.value.yOffset.toDouble(),
-                            canvasWidth = canvasSize.width.toDouble(),
-                            canvasHeight = canvasSize.height.toDouble(),
-                            tStart = functionsState.value.tStart,
-                            tEnd = functionsState.value.tEnd,
-                            thetaStart = functionsState.value.thetaStart,
-                            thetaEnd = functionsState.value.thetaEnd,
-                            function = function
-                        )
-                        .toOffsetList()
-
-                    _graphState.update { currentState ->
-                        currentState.copy(
-                            invalidations = currentState.invalidations + 1,
-                            points = newPoints
-                        )
-                    }
-                } catch (e: Exception) {
-                    if (e !is CancellationException)
-                        _graphState.update { currentState ->
-                            currentState.copy(
-                                invalidations = currentState.invalidations + 1,
-                                points = emptyList()
-                            )
-                        }
+                _graphState.update { currentState ->
+                    currentState.copy(
+                        invalidations = currentState.invalidations + 1,
+                        points = newPoints
+                    )
                 }
             }
         }

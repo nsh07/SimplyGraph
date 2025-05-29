@@ -26,7 +26,7 @@ JNIEXPORT jfloatArray JNICALL
 Java_org_nsh07_simplygraph_NativeBridge_calculateGraphPoints(
         JNIEnv *env,
         jobject,
-        jint xWidth,
+        jdouble xWidth,
         jdouble yWidth,
         jdouble xOffset,
         jdouble yOffset,
