@@ -1,12 +1,18 @@
+import com.android.build.api.dsl.ApplicationExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
 
-android {
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
+}
+
+configure<ApplicationExtension> {
     namespace = "org.nsh07.simplygraph"
     compileSdk = 36
 
@@ -42,14 +48,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_23
-        targetCompatibility = JavaVersion.VERSION_23
-    }
-
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_23)
-        }
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     buildFeatures {
@@ -62,12 +62,13 @@ android {
         }
     }
 
-    sourceSets["main"].jniLibs.srcDirs("src/main/jniLibs")
+    sourceSets["main"].jniLibs {
+        directories.add("src/main/jniLibs")
+    }
 
     splits {
         abi {
             isEnable = true
-            // Optionally, specify a universal APK
             isUniversalApk = true
             reset()
             include("arm64-v8a", "x86_64")
